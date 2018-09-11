@@ -30,7 +30,9 @@ class TelegramFormatter(logging.Formatter):
         return message
 
     def enrich_exception(self, record):
-
+        """
+        Enrich and do some formatting
+        """
         if record.exc_info:
             if not record.exc_text:
                 record.exc_text = self.formatException(record.exc_info)
@@ -54,16 +56,19 @@ class TelegramHandler(logging.handlers.QueueHandler):
 
         queue = Queue()
         super().__init__(queue)
-        handler = LogMessageHandler(token, chat_ids, disable_notifications, disable_preview)
+
+        handler = LogMessageDispatcher(token, chat_ids, disable_notifications, disable_preview)
         handler.setFormatter(TelegramFormatter())
-        dispatcher = logging.handlers.QueueListener(queue, handler)
-        dispatcher.start()
+        listener = logging.handlers.QueueListener(queue, handler)
+        listener.start()
 
     def prepare(self, record):
         return record
 
 
-class LogMessageHandler(logging.Handler):
+class LogMessageDispatcher(logging.Handler):
+
+    TIMEOUT = 7  # seconds
 
     def __init__(self, token, chat_ids, disable_notifications=False, disable_preview=False):
         self.token = token
@@ -73,9 +78,6 @@ class LogMessageHandler(logging.Handler):
         self.session = requests.Session()
         super().__init__()
 
-    def __del__(self):
-        self.session.close()
-
     @property
     def url(self):
         return "https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={text}&parse_mode=markdown&" \
@@ -84,10 +86,16 @@ class LogMessageHandler(logging.Handler):
     def handle(self, record):
         record = self.format(record)
         for chat_id in self.chat_ids:
-            self.session.get(self.url.format(
-                token=self.token,
-                chat_id=chat_id,
-                text=record,
-                disable_web_page_preview=self.disable_preview,
-                disable_notifications=self.disable_notifications
-            ))
+            self.session.get(
+                self.url.format(
+                    token=self.token,
+                    chat_id=chat_id,
+                    text=record,
+                    disable_web_page_preview=self.disable_preview,
+                    disable_notifications=self.disable_notifications
+                ),
+                timeout=self.TIMEOUT
+            )
+
+    def __del__(self):
+        self.session.close()
