@@ -1,0 +1,10 @@
+LICENSE
+MANIFEST.in
+README.rst
+setup.py
+python_telegram_logger/__init__.py
+python_telegram_logger.egg-info/PKG-INFO
+python_telegram_logger.egg-info/SOURCES.txt
+python_telegram_logger.egg-info/dependency_links.txt
+python_telegram_logger.egg-info/requires.txt
+python_telegram_logger.egg-info/top_level.txt
