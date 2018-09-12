@@ -1,9 +1,10 @@
 import logging.handlers
+import time
 from queue import Queue
 
 import requests
 
-__version__ = 1.0
+__version__ = 1.1
 __author__ = "Dmytro Smyk"
 
 
@@ -68,6 +69,7 @@ class Handler(logging.handlers.QueueHandler):
 class LogMessageDispatcher(logging.Handler):
     TIMEOUT = 13  # seconds
     MAX_MSG_LEN = 4096
+    API_CALL_INTERVAL = 1 / 30  # 30 calls per second
 
     def __init__(self, token, chat_ids, disable_notifications=False, disable_preview=False):
         self.token = token
@@ -90,8 +92,8 @@ class LogMessageDispatcher(logging.Handler):
 
             # telegram max length of text is 4096 chars, we need to split our text into chunks
 
-            start_idx, end_idx = 0, self.MAX_MSG_LEN - 2  # don't forget about markdown symbols (```)
             start_chars, end_chars = "", "```"
+            start_idx, end_idx = 0, self.MAX_MSG_LEN - len(end_chars)  # don't forget about markdown symbols (```)
             new_record = record[start_idx:end_idx]
 
             while new_record:
@@ -101,7 +103,7 @@ class LogMessageDispatcher(logging.Handler):
                 self.emit(new_record)
 
                 start_chars = end_chars = "```"
-                start_idx, end_idx = end_idx, end_idx * 2
+                start_idx, end_idx = end_idx, end_idx + self.MAX_MSG_LEN - (len(start_chars) + len(end_chars))
                 new_record = record[start_idx:end_idx]
         else:
             self.emit(record)
@@ -117,6 +119,10 @@ class LogMessageDispatcher(logging.Handler):
             )
 
             self.session.get(url, timeout=self.TIMEOUT)
+
+            # telegram API restrict more than 30 calls per second, this is a very pessimistic sleep,
+            # but should work as a temporary workaround
+            time.sleep(self.API_CALL_INTERVAL)
 
     def __del__(self):
         self.session.close()
