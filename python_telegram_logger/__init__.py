@@ -3,13 +3,13 @@ from queue import Queue
 
 import requests
 
+__version__ = 0.3
+__author__ = "Dmytro Smyk"
 
-__all__ = ['TelegramHandler']
 
-
-class TelegramFormatter(logging.Formatter):
+class Formatter(logging.Formatter):
     """
-    HTML formatter for telegram
+    Default formatter for telegram
     """
 
     DEFAULT_FMT = """*%(levelname)s*\n_%(name)s:%(funcName)s_
@@ -50,15 +50,14 @@ class TelegramFormatter(logging.Formatter):
         return record
 
 
-class TelegramHandler(logging.handlers.QueueHandler):
+class Handler(logging.handlers.QueueHandler):
 
     def __init__(self, token, chat_ids, disable_notifications=False, disable_preview=False):
-
         queue = Queue()
         super().__init__(queue)
 
         handler = LogMessageDispatcher(token, chat_ids, disable_notifications, disable_preview)
-        handler.setFormatter(TelegramFormatter())
+        handler.setFormatter(Formatter())
         listener = logging.handlers.QueueListener(queue, handler)
         listener.start()
 
@@ -67,8 +66,8 @@ class TelegramHandler(logging.handlers.QueueHandler):
 
 
 class LogMessageDispatcher(logging.Handler):
-
-    TIMEOUT = 7  # seconds
+    TIMEOUT = 13  # seconds
+    MAX_MSG_LEN = 4096
 
     def __init__(self, token, chat_ids, disable_notifications=False, disable_preview=False):
         self.token = token
@@ -84,18 +83,43 @@ class LogMessageDispatcher(logging.Handler):
                "disable_web_page_preview={disable_web_page_preview}&disable_notifications={disable_notifications}"
 
     def handle(self, record):
+        self.emit(record)
+
+    def emit(self, record):
         record = self.format(record)
         for chat_id in self.chat_ids:
-            self.session.get(
-                self.url.format(
-                    token=self.token,
-                    chat_id=chat_id,
-                    text=record,
-                    disable_web_page_preview=self.disable_preview,
-                    disable_notifications=self.disable_notifications
-                ),
-                timeout=self.TIMEOUT
-            )
+            for text in self.process_big_record(record):
+                self.session.get(
+                    self.url.format(
+                        token=self.token,
+                        chat_id=chat_id,
+                        text=text,
+                        disable_web_page_preview=self.disable_preview,
+                        disable_notifications=self.disable_notifications
+                    ),
+                    timeout=self.TIMEOUT
+                )
+
+    def process_big_record(self, text):
+        """
+        Max telegram text length is 4096 symbols, so we need to split a message into many
+        """
+        if len(text) > self.MAX_MSG_LEN:
+
+            start_idx, end_idx = 0, self.MAX_MSG_LEN - 2
+            start_fmt, end_fmt = "", "```"
+            new_text = text[start_idx:end_idx]
+
+            while new_text:
+
+                # remove whitespaces, markdown fmt symbols and a carriage return
+                new_text = new_text.rstrip("` \n")
+                yield start_fmt + new_text + end_fmt
+
+                start_fmt = end_fmt = "```"
+                start_idx, end_idx = end_idx, end_idx * 2
+        else:
+            yield text
 
     def __del__(self):
         self.session.close()

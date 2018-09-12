@@ -1,3 +1,4 @@
 .idea/
 dist/
-python_telegram_logger.egg-info
+*.egg-info
+local.py

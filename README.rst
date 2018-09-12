@@ -2,22 +2,34 @@
 Python Telegram Logger
 =====
 
-Provide simple logger which posts messages to a telegram in markdown format. Use a separate thread for a dispatching. Support many chats
+Simple logger which dispatch messages to a telegram in markdown format.
+Uses a separate thread for a dispatching.
+Support many chats.
+Support big messages (over 4096 chars)
+
+
+Installation
+-----------
+
+.. code-block::
+pip install python-telegram-logger
+
 
 Quick start
 -----------
 
-1. Add logger to your dict config:
+1. Configure logger with dict config:
 
 .. code-block:: python
 
     config = {
+        ...
         "version": 1,
         "disable_existing_loggers": False,
         "handlers": {
             "telegram": {
-                "class": "python_telegram_logger.TelegramHandler",
-                "token": "token",
+                "class": "python_telegram_logger.Handler",
+                "token": "bot_token",
                 "chat_ids": [123456789, -1234567891011],
 
             }
@@ -35,6 +47,12 @@ Quick start
 
     import logging
     logger = logging.getLogger("tg")
-    logger.info("TEST")
+
+    logger.info("test")
+
+    try:
+        raise Exception("raise!")
+    except Exception:
+        logger.exception("catch!")
 
 
