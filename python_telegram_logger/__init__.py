@@ -3,7 +3,7 @@ from queue import Queue
 
 import requests
 
-__version__ = 0.3
+__version__ = 1.0
 __author__ = "Dmytro Smyk"
 
 
@@ -83,43 +83,40 @@ class LogMessageDispatcher(logging.Handler):
                "disable_web_page_preview={disable_web_page_preview}&disable_notifications={disable_notifications}"
 
     def handle(self, record):
-        self.emit(record)
 
-    def emit(self, record):
         record = self.format(record)
-        for chat_id in self.chat_ids:
-            for text in self.process_big_record(record):
-                self.session.get(
-                    self.url.format(
-                        token=self.token,
-                        chat_id=chat_id,
-                        text=text,
-                        disable_web_page_preview=self.disable_preview,
-                        disable_notifications=self.disable_notifications
-                    ),
-                    timeout=self.TIMEOUT
-                )
 
-    def process_big_record(self, text):
-        """
-        Max telegram text length is 4096 symbols, so we need to split a message into many
-        """
-        if len(text) > self.MAX_MSG_LEN:
+        if len(record) > self.MAX_MSG_LEN:
 
-            start_idx, end_idx = 0, self.MAX_MSG_LEN - 2
-            start_fmt, end_fmt = "", "```"
-            new_text = text[start_idx:end_idx]
+            # telegram max length of text is 4096 chars, we need to split our text into chunks
 
-            while new_text:
+            start_idx, end_idx = 0, self.MAX_MSG_LEN - 2  # don't forget about markdown symbols (```)
+            start_chars, end_chars = "", "```"
+            new_record = record[start_idx:end_idx]
+
+            while new_record:
 
                 # remove whitespaces, markdown fmt symbols and a carriage return
-                new_text = new_text.rstrip("` \n")
-                yield start_fmt + new_text + end_fmt
+                new_record = start_chars + new_record.rstrip("` \n") + end_chars
+                self.emit(new_record)
 
-                start_fmt = end_fmt = "```"
+                start_chars = end_chars = "```"
                 start_idx, end_idx = end_idx, end_idx * 2
+                new_record = record[start_idx:end_idx]
         else:
-            yield text
+            self.emit(record)
+
+    def emit(self, record):
+        for chat_id in self.chat_ids:
+            url = self.url.format(
+                token=self.token,
+                chat_id=chat_id,
+                text=record,
+                disable_web_page_preview=self.disable_preview,
+                disable_notifications=self.disable_notifications
+            )
+
+            self.session.get(url, timeout=self.TIMEOUT)
 
     def __del__(self):
         self.session.close()
