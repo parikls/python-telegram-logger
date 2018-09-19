@@ -1,12 +1,11 @@
 import logging
 from html import escape
-from abc import ABC
 
 
 __all__ = ("MarkdownFormatter", "HTMLFormatter")
 
 
-class BaseFormatter(logging.Formatter, ABC):
+class BaseFormatter(logging.Formatter):
 
     FMT = BLOCK_OPEN = BLOCK_CLOSE = None
 
