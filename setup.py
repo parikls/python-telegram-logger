@@ -1,9 +1,6 @@
 import os
 from setuptools import find_packages, setup
 
-from python_telegram_logger import __version__, __author__
-
-
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
 
@@ -12,14 +9,14 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='python-telegram-logger',
-    version=__version__,
+    version="1.2",
     packages=find_packages(),
     include_package_data=True,
     license='BSD License',
     description='Simple telegram logger',
     long_description=README,
     url='https://github.com/porovozls/python-telegram-logger',
-    author=__author__,
+    author="Dmytro Smyk",
     author_email='porovozls@gmail.com',
     classifiers=[
         'Intended Audience :: Developers',
