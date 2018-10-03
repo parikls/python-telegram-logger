@@ -35,9 +35,11 @@ Quick start
 
             }
         },
-        "tg": {
-            "level": "INFO",
-            "handlers": ["telegram",]
+        "loggers": {
+            "tg": {
+                "level": "INFO",
+                "handlers": ["telegram",]
+            }
         }
     }
 
@@ -81,8 +83,10 @@ Quick start
                 "formatter": "default"
             }
         },
-        "tg": {
-            "level": "INFO",
-            "handlers": ["telegram",]
+        "loggers": {
+            "tg": {
+                "level": "INFO",
+                "handlers": ["telegram",]
+            }
         }
     }
