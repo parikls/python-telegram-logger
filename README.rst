@@ -32,7 +32,7 @@ Quick start
                 "class": "python_telegram_logger.Handler",
                 "token": "bot_token",
                 "chat_ids": [123456789, -1234567891011],
-
+                "proxy_url": "https://user:pass@10.10.1.10:3128/"       # optional
             }
         },
         "loggers": {
