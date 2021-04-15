@@ -1,3 +1,6 @@
+Project is no longer maintaned.
+===============================
+
 =====
 Python Telegram Logger
 =====
