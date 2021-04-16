@@ -22,13 +22,12 @@ logger = logging.getLogger()
 
 
 class Handler(logging.handlers.QueueHandler):
-
     """
     Base handler which instantiate and start queue listener and message dispatcher
     """
 
-    def __init__(self, token: str, chat_ids: list, format: str=HTML,
-                 disable_notifications: bool=False, disable_preview: bool=False):
+    def __init__(self, token: str, chat_ids: list, format: str = HTML,
+                 disable_notifications: bool = False, disable_preview: bool = False, proxy_url: str = None):
         """
         :param token: telegram bot API token
         :param chat_ids: list of intergers with chat ids
@@ -44,7 +43,7 @@ class Handler(logging.handlers.QueueHandler):
         except Exception:
             raise Exception("TelegramLogging. Unknown format '%s'" % format)
 
-        self.handler = LogMessageDispatcher(token, chat_ids, disable_notifications, disable_preview)
+        self.handler = LogMessageDispatcher(token, chat_ids, disable_notifications, disable_preview, proxy_url)
         self.handler.setFormatter(formatter())
         listener = logging.handlers.QueueListener(queue, self.handler)
         listener.start()
@@ -67,7 +66,8 @@ class LogMessageDispatcher(logging.Handler):
     MAX_MSG_LEN = 4096
     API_CALL_INTERVAL = 1 / 30  # 30 calls per second
 
-    def __init__(self, token: str, chat_ids: list, disable_notifications: bool=False, disable_preview: bool=False):
+    def __init__(self, token: str, chat_ids: list, disable_notifications: bool = False,
+                 disable_preview: bool = False, proxy_url: str = None):
         """
         See Handler args
         """
@@ -76,6 +76,10 @@ class LogMessageDispatcher(logging.Handler):
         self.disable_notifications = disable_notifications
         self.disable_preview = disable_preview
         self.session = requests.Session()
+
+        if proxy_url:
+            self.session.proxies = {'https': proxy_url}
+
         super().__init__()
 
     @property
@@ -118,7 +122,6 @@ class LogMessageDispatcher(logging.Handler):
                 disable_web_page_preview=self.disable_preview,
                 disable_notifications=self.disable_notifications
             )
-
             response = self.session.get(url, timeout=self.TIMEOUT)
             if not response.ok:
                 logger.warning("Telegram log dispatching failed with status code '%s'" % response.status_code)
